@@ -6,6 +6,7 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QFileDialog
 from audio_player import AudioPlayer  # Importa o reprodutor de som
 from audio_recorder import AudioRecorder  # Importa o gravador de som
+from waveform_window import WaveformWindow
 
 
 class MediaPlayerUI(QWidget):
@@ -147,10 +148,15 @@ class MediaPlayerUI(QWidget):
             self.play_audio_file(file)
 
     def play_audio_file(self, file):
-        """Inicia a reprodução do áudio em um thread separado"""
+        """Inicia a reprodução do áudio e exibe a waveform"""
         self.is_playing = True
-        self.play_button.setEnabled(False)  # Desabilita o botão de reproduzir enquanto o áudio toca
+        self.play_button.setEnabled(False)
+
+        self.waveform_window = WaveformWindow(file, parent=self)
+        self.waveform_window.show()
+
         self.player_thread = AudioPlayer(file)
+        self.player_thread.update_time_signal.connect(self.waveform_window.update_pointer)  # Conexão do ponteiro
         self.player_thread.finished.connect(self.on_audio_finished)
         self.player_thread.start()
 

@@ -18,36 +18,37 @@ class AudioPlayer(QThread):
         self.rate = 44100  # Taxa de amostragem
         self.audio_data = None  # Atributo para armazenar os dados de áudio
 
+    update_time_signal = pyqtSignal(float)  # Sinal que enviará o tempo atual da reprodução
+
     def run(self):
-        """Reproduz o arquivo de áudio em um thread separado"""
+        """Reproduz o áudio e atualiza o tempo de reprodução"""
         with wave.open(self.file_path, 'rb') as wf:
             self.rate = wf.getframerate()
             self.audio_data = np.frombuffer(wf.readframes(wf.getnframes()), dtype=np.int16)
 
-        # Configurações de áudio
         p = pyaudio.PyAudio()
         stream = p.open(format=pyaudio.paInt16,
                         channels=1,
                         rate=self.rate,
                         output=True)
 
-        # Reproduz o arquivo em blocos, respeitando o estado de pausa
+        self.current_position = 0
         while self.current_position < len(self.audio_data):
             if self.is_paused:
-                self.paused.emit()
-                while self.is_paused:  # Aguardar até ser retomado
+                while self.is_paused:
                     QThread.msleep(100)
-                self.paused.emit()
-
             chunk = self.audio_data[self.current_position:self.current_position + self.chunk_size]
             stream.write(chunk.tobytes())
+
+            # Envia o tempo atual da reprodução
+            current_time = self.current_position / self.rate
+            self.update_time_signal.emit(current_time)
+
             self.current_position += self.chunk_size
 
         stream.stop_stream()
         stream.close()
         p.terminate()
-
-        # Emite o sinal indicando que a reprodução terminou
         self.finished.emit()
 
     def pause(self):

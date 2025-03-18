@@ -5,7 +5,9 @@ from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QFileDialog
 from audio_player import AudioPlayer  # Importa o reprodutor de som
+from audio_processor import AudioProcessor
 from audio_recorder import AudioRecorder  # Importa o gravador de som
+from frequencyform_window import FrequencyPlotWindow
 from waveform_window import WaveformWindow
 
 
@@ -50,6 +52,7 @@ class MediaPlayerUI(QWidget):
         self.low_pass_button = QPushButton()
         self.low_pass_button.setIcon(QIcon('icons/low_pass.png'))
         self.low_pass_button.setToolTip('Filtro Passa-Baixa')
+        self.low_pass_button.clicked.connect(self.apply_low_pass_filter)
 
         self.high_pass_button = QPushButton()
         self.high_pass_button.setIcon(QIcon('icons/high_pass.png'))
@@ -192,6 +195,28 @@ class MediaPlayerUI(QWidget):
         """Garante que o áudio seja encerrado ao fechar a janela"""
         self.recorder.close()
         event.accept()
+
+    def apply_low_pass_filter(self):
+        """Abre um arquivo de áudio, aplica o filtro passa-baixa e exibe os gráficos"""
+        options = QFileDialog.Options()
+        file_path, _ = QFileDialog.getOpenFileName(self, "Selecionar Arquivo de Áudio", "", "Arquivos Wav (*.wav)",
+                                                   options=options)
+
+        if not file_path:
+            return  # Se o usuário cancelar a seleção
+
+        # Define a frequência de corte do filtro (exemplo: 1000 Hz)
+        cutoff_freq = 1000
+
+        # Processa o áudio e recebe os espectros da FFT antes e depois
+        output_file, freqs, original_fft, filtered_fft = AudioProcessor.low_pass_filter(file_path, cutoff_freq)
+
+        # Exibe os gráficos com a Transformada de Fourier
+        self.plot_window = FrequencyPlotWindow(freqs, original_fft, filtered_fft)
+        self.plot_window.exec_()
+
+        if output_file:
+            print(f"Arquivo filtrado salvo como: {output_file}")
 
 
 if __name__ == '__main__':

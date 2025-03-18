@@ -71,7 +71,7 @@ class MediaPlayerUI(QWidget):
 
         # Criando a área do gráfico de espectro
         self.plot_widget = pg.PlotWidget()
-        self.plot_widget.setTitle("Frequências em Tempo Real")
+        self.plot_widget.setTitle("Gravação em Tempo Real")
         self.plot_widget.setLabel('left', 'Amplitude')
         self.plot_widget.setLabel('bottom', 'Frequência (Hz)')
         self.plot_widget.setYRange(0, 1, padding=0)
@@ -88,8 +88,7 @@ class MediaPlayerUI(QWidget):
     def initAudio(self):
         """Inicializa a configuração de áudio e lista apenas dispositivos de entrada"""
         self.recorder = AudioRecorder()  # Instância do AudioRecorder
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.update_plot)
+        self.recorder.update_signal.connect(self.update_plot)  # Conecta o sinal de atualização do áudio
 
         # Lista apenas dispositivos de ENTRADA (microfones)
         for i in range(self.recorder.audio.get_device_count()):
@@ -118,8 +117,6 @@ class MediaPlayerUI(QWidget):
         # Desativa a escolha de dispositivos
         self.device_selector.setDisabled(True)
 
-        self.timer.start(50)  # Atualiza o gráfico a cada 50ms
-
     def stop_recording(self):
         """Para a gravação, fecha o stream e salva o arquivo"""
         self.recorder.stop_recording()
@@ -127,12 +124,8 @@ class MediaPlayerUI(QWidget):
         # Reabilita a seleção de dispositivo
         self.device_selector.setEnabled(True)
 
-    def update_plot(self):
+    def update_plot(self, data):
         """Atualiza o gráfico de frequência durante a gravação"""
-        data = self.recorder.update_recording()
-        if data is None:
-            return
-
         audio_data = np.frombuffer(data, dtype=np.int16)
         fft_data = np.abs(np.fft.rfft(audio_data))  # Aplica FFT
         fft_data = fft_data / np.max(fft_data)  # Normaliza os valores

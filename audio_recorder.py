@@ -1,3 +1,4 @@
+import wave
 import pyaudio
 import os
 from PyQt5.QtCore import QThread, pyqtSignal
@@ -8,7 +9,7 @@ class AudioRecorder(QThread):
     update_signal = pyqtSignal(bytes)  # Signal para enviar dados gravados para o GUI
     finished_signal = pyqtSignal()  # Signal quando a gravação terminar
 
-    def __init__(self, filename="output.raw"):
+    def __init__(self, filename="output.wav"):
         super().__init__()
         self.audio = pyaudio.PyAudio()
         self.stream = None
@@ -62,15 +63,18 @@ class AudioRecorder(QThread):
         self.stream.close()
         self.audio.terminate()
 
-        # Salva os dados gravados em um arquivo bruto "raw"
+        # Salva os dados gravados em um arquivo WAV
         if not os.path.exists("records"):
             os.makedirs("records")
 
-        filename = f"records/recorded_{len(os.listdir('records')) + 1}.raw"
-        with open(filename, 'wb') as f:
-            f.write(b''.join(self.frames))  # Salva os dados como uma sequência de bytes
+        filename = f"records/recorded_{len(os.listdir('records')) + 1}.wav"
+        with wave.open(filename, 'wb') as wf:
+            wf.setnchannels(self.channels)
+            wf.setsampwidth(self.audio.get_sample_size(self.sample_format))
+            wf.setframerate(self.fs)
+            wf.writeframes(b''.join(self.frames))
 
-        print(f"Gravação salva em records/{filename}")
+        print(f"Gravação salva em {filename}")
         self.finished_signal.emit()  # Emite o sinal indicando que a gravação terminou
 
     def close(self):

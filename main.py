@@ -140,7 +140,7 @@ class MediaPlayerUI(QWidget):
             return  # Não permite iniciar a reprodução se já estiver em andamento
 
         options = QFileDialog.Options()
-        file, _ = QFileDialog.getOpenFileName(self, "Abrir Arquivo de Áudio", "", "Arquivos Raw (*.raw)",
+        file, _ = QFileDialog.getOpenFileName(self, "Abrir Arquivo de Áudio", "", "Arquivos Wav (*.wav)",
                                               options=options)
 
         if file:

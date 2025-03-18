@@ -1,3 +1,4 @@
+import wave
 import numpy as np
 import pyaudio
 from PyQt5.QtCore import pyqtSignal, QThread
@@ -19,8 +20,9 @@ class AudioPlayer(QThread):
 
     def run(self):
         """Reproduz o arquivo de áudio em um thread separado"""
-        with open(self.file_path, 'rb') as f:
-            self.audio_data = np.frombuffer(f.read(), dtype=np.int16)
+        with wave.open(self.file_path, 'rb') as wf:
+            self.rate = wf.getframerate()
+            self.audio_data = np.frombuffer(wf.readframes(wf.getnframes()), dtype=np.int16)
 
         # Configurações de áudio
         p = pyaudio.PyAudio()

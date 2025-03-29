@@ -3,15 +3,13 @@ import numpy as np
 import pyqtgraph as pg
 from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QFileDialog
+from PyQt5.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QComboBox, QFileDialog, \
+    QMessageBox, QInputDialog
 from audio_player import AudioPlayer  # Importa o reprodutor de som
 from audio_processor import AudioProcessor
 from audio_recorder import AudioRecorder  # Importa o gravador de som
 from frequencyform_window import FrequencyPlotWindow
 from waveform_window import WaveformWindow
-import librosa
-import soundfile as sf
-
 
 class MediaPlayerUI(QWidget):
     def __init__(self):
@@ -24,15 +22,17 @@ class MediaPlayerUI(QWidget):
         main_layout = QVBoxLayout()
         button_layout = QHBoxLayout()
 
+        self.setWindowIcon(QIcon('icons/record.png'))
+
         # Botões principais com ícones e tooltips
         self.record_button = QPushButton()
         self.record_button.setIcon(QIcon('icons/record.png'))
-        self.record_button.setToolTip('Gravar')
+        self.record_button.setToolTip('Gravar (apenas .wav)')
         self.record_button.clicked.connect(self.toggle_recording)
 
         self.play_button = QPushButton()
         self.play_button.setIcon(QIcon('icons/play.png'))
-        self.play_button.setToolTip('Reproduzir')
+        self.play_button.setToolTip('Reproduzir (apenas .wav)')
         self.play_button.clicked.connect(self.play_audio)
 
         self.pause_button = QPushButton()
@@ -53,27 +53,23 @@ class MediaPlayerUI(QWidget):
         # Botões de filtros com ícones e tooltips
         self.low_pass_button = QPushButton()
         self.low_pass_button.setIcon(QIcon('icons/low_pass.png'))
-        self.low_pass_button.setToolTip('Filtro Passa-Baixa')
+        self.low_pass_button.setToolTip('Filtro Passa-Baixa (use em .wav e em .mp3)')
         self.low_pass_button.clicked.connect(self.apply_low_pass_filter)
 
         self.high_pass_button = QPushButton()
         self.high_pass_button.setIcon(QIcon('icons/high_pass.png'))
-        self.high_pass_button.setToolTip('Filtro Passa-Alta')
-
-        self.track_pass_button = QPushButton()
-        self.track_pass_button.setIcon(QIcon('icons/band_pass.png'))
-        self.track_pass_button.setToolTip('Filtro Passa-Faixa')
+        self.high_pass_button.setToolTip('Filtro Passa-Alta (use em .wav e em .mp3)')
+        self.high_pass_button.clicked.connect(self.apply_high_pass_filter)
 
         self.band_pass_button = QPushButton()
         self.band_pass_button.setIcon(QIcon('icons/band_pass.png'))
-        self.band_pass_button.setToolTip('Filtro Passa-Banda')
-        self.band_pass_button.clicked.connect(self.select_audio_pass_band)
-
+        self.band_pass_button.setToolTip('Filtro Passa-Faixa (use em .wav e em .mp3)')
+        self.band_pass_button.clicked.connect(self.apply_band_pass_filter)
 
         # Adicionando botões ao layout
         for button in [self.record_button, self.play_button, self.pause_button,
                        self.forward_button, self.rewind_button, self.low_pass_button,
-                       self.high_pass_button, self.track_pass_button, self.band_pass_button]:
+                       self.high_pass_button, self.band_pass_button]:
             button_layout.addWidget(button)
 
         # Lista de dispositivos de entrada (microfones)
@@ -207,66 +203,91 @@ class MediaPlayerUI(QWidget):
     def apply_low_pass_filter(self):
         """Abre um arquivo de áudio, aplica o filtro passa-baixa e exibe os gráficos"""
         options = QFileDialog.Options()
-        file_path, _ = QFileDialog.getOpenFileName(self, "Selecionar Arquivo de Áudio", "", "Arquivos Wav (*.wav)",
+        file_path, _ = QFileDialog.getOpenFileName(self, "Selecionar Arquivo de Áudio", "", "Arquivos Wav (*.wav);; Arquivos MP3 (*.mp3)",
                                                    options=options)
 
         if not file_path:
             return  # Se o usuário cancelar a seleção
 
-        # Define a frequência de corte do filtro (exemplo: 1000 Hz)
-        cutoff_freq = 1000
+        # Solicita a frequência de corte do filtro
+        cutoff_freq, ok1 = QInputDialog.getInt(self, "Filtro Passa-Baixa", "Digite a frequência de corte (Hz):", min=1, max=44100)
+        if not ok1:
+            return  # Se o usuário cancelar a escolha da frequencia
 
         # Processa o áudio e recebe os espectros da FFT antes e depois
         output_file, freqs, original_fft, filtered_fft = AudioProcessor.low_pass_filter(file_path, cutoff_freq)
 
         # Exibe os gráficos com a Transformada de Fourier
-        self.plot_window = FrequencyPlotWindow(freqs, original_fft, filtered_fft)
+        self.plot_window = FrequencyPlotWindow(f"Passa-Baixa ({cutoff_freq} Hz)", freqs, original_fft, filtered_fft)
         self.plot_window.exec_()
 
         if output_file:
-            print(f"Arquivo filtrado salvo como: {output_file}")
+            QMessageBox.information(self, "Sucesso", f"Arquivo filtrado salvo como: {output_file}")
 
-    def select_audio_pass_band(self):
+    def apply_high_pass_filter(self):
+        """Abre um arquivo de áudio, aplica o filtro passa-baixa e exibe os gráficos"""
         options = QFileDialog.Options()
-        file, _ = QFileDialog.getOpenFileName(self, "Abrir Arquivo de Áudio", "", "Arquivos MP3 (*.mp3)",
-                                                  options=options)
-        print(file)
-        if file:
-            arquivo_saida = "records/musica_filtrada.wav"
-            freq_corte_inferior = 1000  # Frequência de corte inferior (Hz)
-            freq_corte_superior = 4000  # Frequência de corte superior (Hz)
-            self.aplicar_filtro_passa_banda_wav(file, arquivo_saida, freq_corte_inferior, freq_corte_superior)
+        file_path, _ = QFileDialog.getOpenFileName(self, "Selecionar Arquivo de Áudio", "", "Arquivos Wav (*.wav);; Arquivos MP3 (*.mp3)",
+                                                   options=options)
 
-    def aplicar_filtro_passa_banda_wav(self, arquivo_entrada, arquivo_saida, freq_corte_inferior, freq_corte_superior):
-        """
-        Aplica um filtro passa-banda a um arquivo MP3 e salva como WAV.
+        if not file_path:
+            return  # Se o usuário cancelar a seleção
 
-        Args:
-            arquivo_entrada (str): Caminho para o arquivo MP3 de entrada.
-            arquivo_saida (str): Caminho para o arquivo WAV de saída filtrado.
-            freq_corte_inferior (float): Frequência de corte inferior do filtro.
-            freq_corte_superior (float): Frequência de corte superior do filtro.
-        """
+        # Solicita a frequência de corte do filtro
+        cutoff_freq, ok1 = QInputDialog.getInt(self, "Filtro Passa-Alta ({cutoff_freq} Hz)", "Digite a frequência de corte (Hz):", min=1,
+                                               max=44100)
+        if not ok1:
+            return  # Se o usuário cancelar a escolha da frequencia
 
-        # Carrega o arquivo MP3
-        sinal_audio, taxa_amostragem = librosa.load(arquivo_entrada)
+        # Processa o áudio e recebe os espectros da FFT antes e depois
+        output_file, freqs, original_fft, filtered_fft = AudioProcessor.high_pass_filter(file_path, cutoff_freq)
 
-        # Aplica a Transformada de Fourier
-        espectro = np.fft.fft(sinal_audio)
-        frequencias = np.fft.fftfreq(len(espectro), 1 / taxa_amostragem)
+        # Exibe os gráficos com a Transformada de Fourier
+        self.plot_window = FrequencyPlotWindow(f"Passa-Alta", freqs, original_fft, filtered_fft)
+        self.plot_window.exec_()
 
-        # Cria o filtro passa-banda
-        filtro = np.zeros_like(espectro)
-        filtro[(np.abs(frequencias) >= freq_corte_inferior) & (np.abs(frequencias) <= freq_corte_superior)] = 1
+        if output_file:
+            QMessageBox.information(self, "Sucesso", f"Arquivo filtrado salvo como: {output_file}")
 
-        # Aplica o filtro
-        espectro_filtrado = espectro * filtro
+    def apply_band_pass_filter(self):
+        """Abre um arquivo de áudio, solicita as frequências do filtro passa-banda, aplica o filtro e exibe os gráficos"""
+        options = QFileDialog.Options()
+        file_path, _ = QFileDialog.getOpenFileName(self, "Selecionar Arquivo de Áudio", "", "Arquivos Wav (*.wav);; Arquivos MP3 (*.mp3)",
+                                                   options=options)
 
-        # Aplica a Transformada de Fourier inversa
-        sinal_filtrado = np.fft.ifft(espectro_filtrado).real
+        if not file_path:
+            return  # Se o usuário cancelar a seleção
 
-        # Salva o arquivo WAV filtrado
-        sf.write(arquivo_saida, sinal_filtrado, taxa_amostragem)
+        # Solicita a frequência mínima
+        lowcut, ok1 = QInputDialog.getInt(self, "Passa-Banda", "Digite a frequência mínima (Hz):", min=1,
+                                          max=20000)
+        if not ok1:
+            return  # Se o usuário cancelar
+
+        # Solicita a frequência máxima
+        highcut, ok2 = QInputDialog.getInt(self, "Passa-Banda", "Digite a frequência máxima (Hz):",
+                                           min=lowcut + 1, max=20000)
+        if not ok2:
+            return  # Se o usuário cancelar
+
+        # Garante que os valores são válidos
+        if lowcut >= highcut:
+            QMessageBox.critical(self, "Erro", "A frequência mínima deve ser menor que a máxima.")
+            return
+
+        # Processa o áudio e recebe os espectros da FFT antes e depois
+        output_file, freqs, original_fft, filtered_fft = AudioProcessor.band_pass_filter(file_path, lowcut, highcut)
+
+        # Converte os valores complexos em magnitudes reais
+        original_fft = np.abs(original_fft)
+        filtered_fft = np.abs(filtered_fft)
+
+        # Exibe os gráficos com a Transformada de Fourier
+        self.plot_window = FrequencyPlotWindow(f"Passa-Banda ({lowcut} - {highcut} Hz)", freqs, original_fft, filtered_fft)
+        self.plot_window.exec_()
+
+        if output_file:
+            QMessageBox.information(self, "Sucesso", f"Arquivo filtrado salvo como: {output_file}")
 
 
 if __name__ == '__main__':

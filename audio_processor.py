@@ -43,6 +43,10 @@ class AudioProcessor:
         # Normaliza novamente para o intervalo original
         filtered_audio = np.int16(filtered_audio / np.max(np.abs(filtered_audio)) * 32767)
 
+        # Corrige o problema de audio duplicado em arquivos .mp3
+        if file_path.endswith(".mp3"):
+            filtered_audio = filtered_audio[:len(filtered_audio) // 2]
+
         # Define o nome do arquivo de saída
         output_file = file_path.replace(".wav", f"_{cutoff_freq}_LP.wav").replace(".mp3", f"_{cutoff_freq}_LP.wav")
 
@@ -89,6 +93,10 @@ class AudioProcessor:
         # Normaliza novamente para o intervalo original
         filtered_audio = np.int16(filtered_audio / np.max(np.abs(filtered_audio)) * 32767)
 
+        # Corrige o problema de audio duplicado em arquivos .mp3
+        if file_path.endswith(".mp3"):
+            filtered_audio = filtered_audio[:len(filtered_audio) // 2]
+
         # Define o nome do arquivo de saída
         output_file = file_path.replace(".wav", f"_{cutoff_freq}_HP.wav").replace(".mp3", f"_{cutoff_freq}_HP.wav")
 
@@ -134,6 +142,10 @@ class AudioProcessor:
 
         # Normaliza novamente para o intervalo original
         filtered_audio = np.int16(filtered_audio / np.max(np.abs(filtered_audio)) * 32767)
+
+        # Corrige o problema de audio duplicado em arquivos .mp3
+        if file_path.endswith(".mp3"):
+            filtered_audio = filtered_audio[:len(filtered_audio) // 2]
 
         # Define o nome do arquivo de saída
         output_file = file_path.replace(".wav", f"_{lowcut_freq}-{highcut_freq}_BP.wav").replace(".mp3", f"_{lowcut_freq}-{highcut_freq}_BP.wav")

@@ -28,6 +28,9 @@ class AudioRecorder(QThread):
         if self.recording:
             return  # Já está gravando
 
+        # **Reinicializa o PyAudio para evitar erros em novas gravações**
+        self.audio = pyaudio.PyAudio()
+
         # Inicia o stream de áudio
         self.stream = self.audio.open(format=self.sample_format,
                                       channels=self.channels,
@@ -59,9 +62,9 @@ class AudioRecorder(QThread):
         self.recording = False
 
         # Para o stream de áudio
-        self.stream.stop_stream()
-        self.stream.close()
-        self.audio.terminate()
+        if self.stream:
+            self.stream.stop_stream()
+            self.stream.close()
 
         # Salva os dados gravados em um arquivo WAV
         if not os.path.exists("records"):
